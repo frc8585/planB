@@ -3,6 +3,7 @@ package frc.robot;
 import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
+import static edu.wpi.first.units.Units.Rotations; // <-- 補上這行匯入
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Volts;
@@ -78,35 +79,58 @@ public class Constants {
     }    
     
     public static final class ShooterConstants {
-        public static final int FLYWHEEL_LEFT_ID = 10; // 依實際 CAN ID 修改
+        // --- 馬達 ID ---
+        public static final int FLYWHEEL_LEFT_ID = 10;
         public static final int FLYWHEEL_RIGHT_ID = 11;
         public static final int FEEDER_ID = 12;
-
+        public static final int PIVOT_LEFT_ID = 13;
+        public static final int PIVOT_RIGHT_ID = 14;
+    
+        // --- 飛輪設定 ---
         public static final Slot0Configs FLYWHEEL_GAINS = new Slot0Configs()
-            .withKP(0.1)
-            .withKI(0.0)
-            .withKD(0.0)
-            .withKV(0.12);
-
+            .withKP(0.1).withKI(0.0).withKD(0.0).withKV(0.12);
+    
         public static final MotorOutputConfigs FLYWHEEL_OUTPUT_CONFIGS = new MotorOutputConfigs()
             .withNeutralMode(NeutralModeValue.Coast);
-
+    
         public static final CurrentLimitsConfigs FLYWHEEL_CURRENT_LIMITS = new CurrentLimitsConfigs()
-            .withStatorCurrentLimit(40.0)
-            .withStatorCurrentLimitEnable(true);
-
-        public static final MotorOutputConfigs FEEDER_OUTPUT_CONFIGS = new MotorOutputConfigs()
-            .withNeutralMode(NeutralModeValue.Brake);
-
-        public static final CurrentLimitsConfigs FEEDER_CURRENT_LIMITS = new CurrentLimitsConfigs()
-            .withStatorCurrentLimit(30.0)
-            .withStatorCurrentLimitEnable(true);
-
-        public static final AngularVelocity TARGET_SHOOT_VELOCITY = RotationsPerSecond.of(50);
+            .withStatorCurrentLimit(40.0).withStatorCurrentLimitEnable(true);
+    
         public static final AngularVelocity FLYWHEEL_TOLERANCE = RotationsPerSecond.of(3);
         public static final AngularVelocity FLYWHEEL_STALL_VEL = RotationsPerSecond.of(2);
         public static final Current FLYWHEEL_STALL_CURRENT = Amps.of(35);
-
+    
+        // --- 仰角（Pivot）設定 ---
+        public static final Slot0Configs PIVOT_GAINS = new Slot0Configs()
+            .withKP(1.0).withKI(0.0).withKD(0.0);
+    
+        public static final Slot1Configs PIVOT_DIFF_GAINS = new Slot1Configs()
+            .withKP(0.5).withKI(0.0).withKD(0.0);
+    
+        public static final MotorOutputConfigs PIVOT_OUTPUT_CONFIGS = new MotorOutputConfigs()
+            .withNeutralMode(NeutralModeValue.Brake);
+    
+        public static final CurrentLimitsConfigs PIVOT_CURRENT_LIMITS = new CurrentLimitsConfigs()
+            .withStatorCurrentLimit(30.0).withStatorCurrentLimitEnable(true);
+    
+        public static final MotionMagicConfigs PIVOT_MOTION_MAGIC = new MotionMagicConfigs()
+            .withMotionMagicCruiseVelocity(50)
+            .withMotionMagicAcceleration(100);
+    
+        public static final Angle PIVOT_STOW_POS = Rotations.of(0);
+        public static final Angle PIVOT_TOLERANCE = Rotations.of(0.02);
+        public static final AngularVelocity PIVOT_STALL_VEL = RadiansPerSecond.of(0.1);
+        public static final Current PIVOT_STALL_CURRENT = Amps.of(25);
+    
+        public static final Voltage PIVOT_ZEROING_VOLTAGE = Volts.of(-2);
+    
+        // --- 餵料與發射設定 ---
+        public static final MotorOutputConfigs FEEDER_OUTPUT_CONFIGS = new MotorOutputConfigs()
+            .withNeutralMode(NeutralModeValue.Brake);
+    
+        public static final CurrentLimitsConfigs FEEDER_CURRENT_LIMITS = new CurrentLimitsConfigs()
+            .withStatorCurrentLimit(30.0).withStatorCurrentLimitEnable(true);
+    
         public static final Voltage FEEDER_SHOOT_VOLTAGE = Volts.of(8);
     }
 }
