@@ -76,4 +76,37 @@ public class Constants {
         public static final Current SPIN_STALL_CURRENT = Amps.of(20);
         public static final AngularVelocity SPIN_STALL_ANGULAR_VELOCITY = RadiansPerSecond.of(0);
     }    
+    
+    public static final class ShooterConstants {
+        public static final int FLYWHEEL_LEFT_ID = 10; // 依實際 CAN ID 修改
+        public static final int FLYWHEEL_RIGHT_ID = 11;
+        public static final int FEEDER_ID = 12;
+
+        public static final Slot0Configs FLYWHEEL_GAINS = new Slot0Configs()
+            .withKP(0.1)
+            .withKI(0.0)
+            .withKD(0.0)
+            .withKV(0.12);
+
+        public static final MotorOutputConfigs FLYWHEEL_OUTPUT_CONFIGS = new MotorOutputConfigs()
+            .withNeutralMode(NeutralModeValue.Coast);
+
+        public static final CurrentLimitsConfigs FLYWHEEL_CURRENT_LIMITS = new CurrentLimitsConfigs()
+            .withStatorCurrentLimit(40.0)
+            .withStatorCurrentLimitEnable(true);
+
+        public static final MotorOutputConfigs FEEDER_OUTPUT_CONFIGS = new MotorOutputConfigs()
+            .withNeutralMode(NeutralModeValue.Brake);
+
+        public static final CurrentLimitsConfigs FEEDER_CURRENT_LIMITS = new CurrentLimitsConfigs()
+            .withStatorCurrentLimit(30.0)
+            .withStatorCurrentLimitEnable(true);
+
+        public static final AngularVelocity TARGET_SHOOT_VELOCITY = RotationsPerSecond.of(50);
+        public static final AngularVelocity FLYWHEEL_TOLERANCE = RotationsPerSecond.of(3);
+        public static final AngularVelocity FLYWHEEL_STALL_VEL = RotationsPerSecond.of(2);
+        public static final Current FLYWHEEL_STALL_CURRENT = Amps.of(35);
+
+        public static final Voltage FEEDER_SHOOT_VOLTAGE = Volts.of(8);
+    }
 }
