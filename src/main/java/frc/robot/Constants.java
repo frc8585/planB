@@ -2,11 +2,14 @@ package frc.robot;
 
 import static edu.wpi.first.units.Units.Amps;
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.Rotations; // <-- 補上這行匯入
+import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Volts;
+
+import java.util.Set;
 
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
@@ -17,15 +20,51 @@ import com.ctre.phoenix6.configs.Slot1Configs;
 import com.ctre.phoenix6.signals.InvertedValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
 
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.apriltag.AprilTagFieldLayout;
+import edu.wpi.first.apriltag.AprilTagFields;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
 
 public class Constants {
     public static final CANBus CAN_FD_BUS = new CANBus("base1");
     public static final CANBus CAN_RIO_BUS = new CANBus("rio");
 
+    public static final class DriveConstants {
+        // --- 底盤馬達 CAN ID (Talon SRX 通常掛在 RIO CAN 總線) ---
+        public static final int LEFT_LEADER_ID = 1;
+        public static final int LEFT_FOLLOWER_ID = 2;
+        public static final int RIGHT_LEADER_ID = 3;
+        public static final int RIGHT_FOLLOWER_ID = 4;
+
+        // --- 連續電流與電流限制 (CIM 馬達保護) ---
+        public static final int CURRENT_LIMIT_AMPS = 40;
+    }
+
+    public static final class IndexConstants {
+    // --- 馬達 CAN ID (請依實際配線修改) ---
+    public static final int INDEX_MOTOR_ID = 15; // 範例 ID，可自行更改
+
+    // --- 馬達輸出與轉向設定 (順時針正轉) ---
+    public static final MotorOutputConfigs INDEX_OUTPUT_CONFIGS = new MotorOutputConfigs()
+        .withNeutralMode(NeutralModeValue.Brake)
+        .withInverted(InvertedValue.Clockwise_Positive); // 設定順時針為正向
+
+    // --- 電流限制 (保護 Kraken X44) ---
+    public static final CurrentLimitsConfigs INDEX_CURRENT_LIMITS = new CurrentLimitsConfigs()
+        .withStatorCurrentLimit(40.0)
+        .withStatorCurrentLimitEnable(true);
+
+    // --- 預設運作電壓 ---
+    public static final Voltage INDEX_RUN_VOLTAGE = Volts.of(8.0);   // 正轉送球電壓
+    public static final Voltage INDEX_REVERSE_VOLTAGE = Volts.of(-6.0); // 反轉吐球電壓
+    }
+    
     public static class IntakeConstants {
         public static final int LEFT_SPIN_ID = 10;
         public static final int RIGHT_SPIN_ID = 11;
@@ -79,14 +118,12 @@ public class Constants {
     }    
     
     public static final class ShooterConstants {
-        // --- 馬達 ID ---
         public static final int FLYWHEEL_LEFT_ID = 10;
         public static final int FLYWHEEL_RIGHT_ID = 11;
         public static final int FEEDER_ID = 12;
         public static final int PIVOT_LEFT_ID = 13;
         public static final int PIVOT_RIGHT_ID = 14;
     
-        // --- 飛輪設定 ---
         public static final Slot0Configs FLYWHEEL_GAINS = new Slot0Configs()
             .withKP(0.1).withKI(0.0).withKD(0.0).withKV(0.12);
     
@@ -100,7 +137,6 @@ public class Constants {
         public static final AngularVelocity FLYWHEEL_STALL_VEL = RotationsPerSecond.of(2);
         public static final Current FLYWHEEL_STALL_CURRENT = Amps.of(35);
     
-        // --- 仰角（Pivot）設定 ---
         public static final Slot0Configs PIVOT_GAINS = new Slot0Configs()
             .withKP(1.0).withKI(0.0).withKD(0.0);
     
@@ -124,13 +160,46 @@ public class Constants {
     
         public static final Voltage PIVOT_ZEROING_VOLTAGE = Volts.of(-2);
     
-        // --- 餵料與發射設定 ---
         public static final MotorOutputConfigs FEEDER_OUTPUT_CONFIGS = new MotorOutputConfigs()
-            .withNeutralMode(NeutralModeValue.Brake);
+            .withNeutralMode(NeutralModeValue.Brake)
+            .withInverted(InvertedValue.CounterClockwise_Positive);
     
         public static final CurrentLimitsConfigs FEEDER_CURRENT_LIMITS = new CurrentLimitsConfigs()
-            .withStatorCurrentLimit(30.0).withStatorCurrentLimitEnable(true);
+            .withStatorCurrentLimit(40.0)
+            .withStatorCurrentLimitEnable(true);
     
         public static final Voltage FEEDER_SHOOT_VOLTAGE = Volts.of(8);
+    }
+
+    public static final class VisionConstants {
+        // 3 顆 OV9281 相機名稱（需與 PhotonVision 介面中的名稱相符）
+        public static final String[] CAMERA_NAMES = { "camera_front", "camera_left", "camera_right" };
+
+        // 相機在機器人本體座標系下的安裝位置 (X, Y, Z 與 Roll, Pitch, Yaw)
+        public static final Transform3d[] CAMERA_TRANSFORMS = {
+            new Transform3d(new Translation3d(0.3, 0.0, 0.5), new Rotation3d(0, 0, 0)), // 前相機
+            new Transform3d(new Translation3d(0.0, 0.3, 0.5), new Rotation3d(0, 0, 90)), // 左相機
+            new Transform3d(new Translation3d(0.0, -0.3, 0.5), new Rotation3d(0, 0, -90)) // 右相機
+        };
+
+        // 載入官方場地 AprilTag 地圖
+        public static final AprilTagFieldLayout APRIL_TAGS = 
+            AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+
+        // 過濾閥值
+        public static final double MAX_AMBIGUITY = 0.2;
+        public static final Distance MAX_Z_HEIGHT = Meters.of(0.75);
+
+        // 標準差基準與偏置
+        public static final double[] LINEAR_STD_DEV_BASELINES = { 0.1, 0.1, 0.1 };
+        public static final double ANGULAR_STD_DEV_BASELINE = 0.1;
+        public static final double HUB_TAG_STD_DEV_BIAS = 0.5;
+        public static final double CLIMB_TAG_STD_DEV_BIAS = 0.5;
+
+        // 目標 Tag ID 集合 (可根據實際賽季手遊或手冊增減)
+        public static final Set<Integer> BLUE_HUB_TAG_IDS = Set.of(1, 2, 3);
+        public static final Set<Integer> RED_HUB_TAG_IDS = Set.of(4, 5, 6);
+        public static final Set<Integer> BLUE_CLIMB_TAG_IDS = Set.of(14, 15);
+        public static final Set<Integer> RED_CLIMB_TAG_IDS = Set.of(20, 21);
     }
 }

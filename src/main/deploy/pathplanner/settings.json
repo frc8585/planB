@@ -1,0 +1,10 @@
+{
+  "robotMass": 50.0,
+  "robotMOI": 5.0,
+  "wheelRadius": 0.05,
+  "wheelCOF": 1.2,
+  "driveGearing": 10.0,
+  "maxDriveSpeed": 4.5,
+  "trackwidth": 0.6,
+  "isSwerve": false
+}

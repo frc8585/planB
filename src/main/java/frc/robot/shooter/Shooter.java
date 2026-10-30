@@ -8,7 +8,7 @@ import static frc.robot.Constants.ShooterConstants.*;
 
 import com.ctre.phoenix6.configs.FeedbackConfigs;
 import com.ctre.phoenix6.configs.MotorOutputConfigs;
-import com.ctre.phoenix6.configs.Slot1Configs; // 新增這行匯入
+import com.ctre.phoenix6.configs.Slot1Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.DifferentialMotionMagicVoltage;
 import com.ctre.phoenix6.controls.DifferentialVoltage;
@@ -29,16 +29,19 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
 public class Shooter extends SubsystemBase {
+    // --- 硬體宣告 ---
     private final TalonFX leftFlywheelMotor;
     private final TalonFX rightFlywheelMotor;
-    private final TalonFX feederMotor;
+    private final TalonFX feederMotor; // 1顆 Kraken X44 餵料輪
     private final SimpleDifferentialMechanism<TalonFX> diffMechPivot;
 
+    // --- 組態設定宣告 ---
     private final TalonFXConfiguration flywheelConfig;
     private final TalonFXConfiguration pivotConfig;
     private final DifferentialMotorConstants<TalonFXConfiguration> diffConfigPivot;
     private final TalonFXConfiguration feederConfig;
 
+    // --- 控制請求 (Control Requests) ---
     private final VelocityVoltage leftFlywheelVelOut = new VelocityVoltage(0);
     private final VelocityVoltage rightFlywheelVelOut = new VelocityVoltage(0);
     private final VoltageOut feederVoltageOut = new VoltageOut(0);
@@ -46,14 +49,17 @@ public class Shooter extends SubsystemBase {
     private final DifferentialMotionMagicVoltage pivotPositionOut = new DifferentialMotionMagicVoltage(0, 0);
     private final DifferentialVoltage pivotVoltageOut = new DifferentialVoltage(0, 0);
 
+    // 記錄目標狀態
     private AngularVelocity targetLeftVel = RotationsPerSecond.of(0);
     private AngularVelocity targetRightVel = RotationsPerSecond.of(0);
 
     public Shooter() {
+        // 1. 初始化馬達
         leftFlywheelMotor = new TalonFX(FLYWHEEL_LEFT_ID, Constants.CAN_FD_BUS.getName());
         rightFlywheelMotor = new TalonFX(FLYWHEEL_RIGHT_ID, Constants.CAN_FD_BUS.getName());
         feederMotor = new TalonFX(FEEDER_ID, Constants.CAN_FD_BUS.getName());
 
+        // 2. 飛輪 X44 設定 (同方向順時針)
         flywheelConfig = new TalonFXConfiguration()
             .withSlot0(FLYWHEEL_GAINS)
             .withMotorOutput(new MotorOutputConfigs()
@@ -65,6 +71,7 @@ public class Shooter extends SubsystemBase {
         leftFlywheelMotor.getConfigurator().apply(flywheelConfig);
         rightFlywheelMotor.getConfigurator().apply(flywheelConfig);
 
+        // 3. 仰角 X60 差動機構設定
         pivotConfig = new TalonFXConfiguration()
             .withSlot0(PIVOT_GAINS)
             .withSlot1(PIVOT_DIFF_GAINS)
@@ -85,6 +92,7 @@ public class Shooter extends SubsystemBase {
 
         diffMechPivot = new SimpleDifferentialMechanism<TalonFX>(TalonFX::new, diffConfigPivot);
 
+        // 4. 餵料輪 X44 設定 (逆時針旋轉推送)
         feederConfig = new TalonFXConfiguration()
             .withCurrentLimits(FEEDER_CURRENT_LIMITS)
             .withMotorOutput(FEEDER_OUTPUT_CONFIGS);
@@ -94,24 +102,34 @@ public class Shooter extends SubsystemBase {
         diffMechPivot.setPosition(0, 0);
     }
 
+    /* ==================== Commands (指令組) ==================== */
+
+    /**
+     * 發射主指令：設定目標仰角與飛輪速差，當系統準備就緒（轉速與仰角皆到位）時，自動啟動 X44 餵料輪送球
+     */
     public Command shoot(AngularVelocity leftVel, AngularVelocity rightVel, Angle pivotAngle) {
         return this.runEnd(
             () -> {
+                // 持續送出目標位置與飛輪轉速
                 setPivotPosition(pivotAngle);
                 setFlywheelVelocities(leftVel, rightVel);
                 
+                // 【核心準備就緒機制】：只有當雙飛輪轉速達到 且 仰角到達指定角度時才送球
                 if (isFlywheelAtVelocity() && isPivotAtPosition(pivotAngle)) {
-                    setFeederVoltage(FEEDER_SHOOT_VOLTAGE);
+                    setFeederVoltage(FEEDER_SHOOT_VOLTAGE); // 啟動 X44 逆時針送球
                 } else {
-                    stopFeeder();
+                    stopFeeder(); // 未準備好前暫停餵料，防止球過早滑入或掉速
                 }
             },
             this::stopAll
         )
         .until(this::flywheelStalled).andThen(unjamShooter())
-        .withName("Shooter: Shoot with Differentials");
+        .withName("Shooter: Shoot with Feeder Ready Check");
     }
 
+    /**
+     * 仰角歸零程序
+     */
     public Command zeroPivotSequence() {
         return Commands.sequence(
             this.runOnce(() -> setPivotOutput(PIVOT_ZEROING_VOLTAGE)),
@@ -125,16 +143,21 @@ public class Shooter extends SubsystemBase {
         ).withName("Shooter: Zero Pivot");
     }
 
+    /**
+     * 卡死解除（Unjam）：反轉飛輪與逆時針餵料輪以吐出卡住的球
+     */
     private Command unjamShooter() {
         return Commands.sequence(
             this.runOnce(() -> {
                 setFlywheelVoltage(Volts.of(-3), Volts.of(-3));
-                setFeederVoltage(FEEDER_SHOOT_VOLTAGE.unaryMinus());
+                setFeederVoltage(FEEDER_SHOOT_VOLTAGE.unaryMinus()); // 反轉吐球
             }),
             Commands.waitSeconds(0.5),
             this.runOnce(this::stopAll)
         ).withName("Shooter: Unjam");
     }
+
+    /* ==================== Status & Checks (狀態檢查) ==================== */
 
     public boolean isFlywheelAtVelocity() {
         double leftCurr = leftFlywheelMotor.getVelocity().getValueAsDouble();
@@ -159,6 +182,8 @@ public class Shooter extends SubsystemBase {
         double velocity = diffMechPivot.getAverageVelocity().getValueAsDouble();
         return current >= PIVOT_STALL_CURRENT.in(Amps) && Math.abs(velocity) < PIVOT_STALL_VEL.in(RadiansPerSecond);
     }
+
+    /* ==================== Control Methods (控制方法) ==================== */
 
     public void setFlywheelVelocities(AngularVelocity leftVel, AngularVelocity rightVel) {
         this.targetLeftVel = leftVel;
