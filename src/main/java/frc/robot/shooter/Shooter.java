@@ -232,4 +232,12 @@ public class Shooter extends SubsystemBase {
         stopShooting();
         stopPivot();
     }
+
+    public double getLeftFlywheelRps() {
+        return leftFlywheelMotor.getVelocity().getValueAsDouble();
+    }
+
+    public double getRightFlywheelRps() {
+        return rightFlywheelMotor.getVelocity().getValueAsDouble();
+    }
 }

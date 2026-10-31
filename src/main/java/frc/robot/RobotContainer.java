@@ -15,6 +15,9 @@ import frc.robot.intake.Intake;
 import frc.robot.shooter.Shooter;
 import frc.robot.vision.Vision;
 
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotController;
+
 public class RobotContainer {
     // --- 子系統 ---
     private final Drive m_drive = new Drive();
@@ -43,7 +46,7 @@ public class RobotContainer {
         m_drive.setDefaultCommand(
             m_drive.arcadeDriveCommand(
                 () -> -driverController.getLeftY(),
-                () -> driverController.getRightX()
+                () -> -driverController.getRightX()
             )
         );
 
@@ -86,12 +89,40 @@ public class RobotContainer {
     }
 
     private void configureAutos() {
-        autoChooser.setDefaultOption("Do Nothing", Commands.none());
-        autoChooser.addOption("Drive Forward 2s",
-            m_drive.run(() -> m_drive.driveArcade(0.4, 0.0))
-                .withTimeout(2.0)
-                .andThen(m_drive.runOnce(m_drive::stop)));
-        SmartDashboard.putData("Auto Chooser", autoChooser);
+    autoChooser.setDefaultOption("Back Up",
+        m_drive.run(() -> m_drive.driveArcade(-0.4, 0.0))  // 負值 = 往車尾（發射器那一側）倒車
+            .withTimeout(1.5)                               // 走 1.5 秒
+            .finallyDo(m_drive::stop));                     // 結束後停車
+
+    autoChooser.addOption("Do Nothing", Commands.none());
+
+    SmartDashboard.putData("Auto Chooser", autoChooser);
+    }    
+
+    /** 每個 loop 呼叫一次，把資料送到 NetworkTables */
+    public void updateDashboard() {
+    // ---- 比賽與電源 ----
+    SmartDashboard.putNumber("Match/Battery Voltage", RobotController.getBatteryVoltage());
+    SmartDashboard.putNumber("Match/Match Time", DriverStation.getMatchTime()); // 倒數秒數；非比賽時為 -1
+    SmartDashboard.putBoolean("Match/Browned Out", RobotController.isBrownedOut());
+    SmartDashboard.putNumber("Match/CAN Utilization %", RobotController.getCANStatus().percentBusUtilization * 100.0);
+    SmartDashboard.putBoolean("Match/Enabled", DriverStation.isEnabled());
+    SmartDashboard.putString("Match/Mode",
+        DriverStation.isDisabled() ? "Disabled"
+        : DriverStation.isAutonomous() ? "Autonomous"
+        : DriverStation.isTest() ? "Test" : "Teleop");
+    SmartDashboard.putString("Match/Alliance",
+        DriverStation.getAlliance().map(a -> a.name()).orElse("Unknown"));
+
+    // ---- Shooter ----
+    SmartDashboard.putBoolean("Shooter/At Speed", m_shooter.isFlywheelAtVelocity());
+    SmartDashboard.putBoolean("Shooter/Stalled", m_shooter.flywheelStalled());
+    SmartDashboard.putNumber("Shooter/Left Flywheel RPS", m_shooter.getLeftFlywheelRps());
+    SmartDashboard.putNumber("Shooter/Right Flywheel RPS", m_shooter.getRightFlywheelRps());
+
+    // ---- Intake ----
+    SmartDashboard.putBoolean("Intake/Stowed", m_intake.isStowed());
+    SmartDashboard.putBoolean("Intake/Rack Stalled", m_intake.rackStalled());
     }
 
     public Command getAutonomousCommand() {

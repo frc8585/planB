@@ -34,6 +34,8 @@ public void robotPeriodic() {
     // 警告：在練習模式或未連上場地時，這數值通常會是 -1.0，但比賽時會自動變成 15秒/150秒 倒數
     double matchTime = edu.wpi.first.wpilibj.DriverStation.getMatchTime();
     edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("Match Countdown", matchTime);
+
+    m_robotContainer.updateDashboard();
 }
 
   @Override
