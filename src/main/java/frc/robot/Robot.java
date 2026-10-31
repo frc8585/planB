@@ -18,9 +18,23 @@ public class Robot extends TimedRobot {
   }
 
   @Override
-  public void robotPeriodic() {
+public void robotPeriodic() {
+    // 執行指令排程器 (原本就在的)
     CommandScheduler.getInstance().run();
-  }
+
+    // ==========================================
+    // 傳送資料到 NetworkTables (Elastic 讀得到)
+    // ==========================================
+    
+    // 1. 取得目前機器人電池電壓
+    double voltage = edu.wpi.first.wpilibj.RobotController.getInputVoltage();
+    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("Battery Voltage", voltage);
+
+    // 2. 取得 FRC 官方場地提供的比賽剩餘時間 (自動倒數計時)
+    // 警告：在練習模式或未連上場地時，這數值通常會是 -1.0，但比賽時會自動變成 15秒/150秒 倒數
+    double matchTime = edu.wpi.first.wpilibj.DriverStation.getMatchTime();
+    edu.wpi.first.wpilibj.smartdashboard.SmartDashboard.putNumber("Match Countdown", matchTime);
+}
 
   @Override
   public void disabledInit() {}

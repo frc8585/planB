@@ -88,9 +88,11 @@ public class RobotContainer {
             )
         );
 
-        // ==================== C. LB 鍵：Index 反轉吐球 (Unjam) ====================
+        // ==================== C. LB 鍵：Intake 與 Index 同時反轉吐球 (Unjam 卡彈解除) ====================
         operatorController.leftBumper().whileTrue(
-            m_index.reverseIndexCommand()
+            m_intake.reverseCommand().alongWith(
+                m_index.reverseIndexCommand()
+            )
         );
 
         // ==================== D. RT 鍵：自動瞄準 HUB 並射擊 + Index 正轉 ====================

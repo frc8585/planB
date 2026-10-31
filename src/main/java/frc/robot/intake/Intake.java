@@ -113,6 +113,16 @@ public class Intake extends SubsystemBase{
         .withName("Deploy Right Intake");
     }
 
+    /**
+     * Intake 反轉吐球指令 (供 LB 鍵 Unjam 使用)
+     */
+    public Command reverseCommand() {
+        return this.runEnd(
+            () -> setSpinOutput(SPIN_VOLTAGE.unaryMinus()), // 反轉滾輪
+            this::stopIntake                                // 放開時停止
+        ).withName("Intake: Reverse");
+    }
+
     public Command zeroSequence() {
         return Commands.sequence(
             this.runOnce(() -> setRackOutput(ZEROING_VOLTAGE)),
