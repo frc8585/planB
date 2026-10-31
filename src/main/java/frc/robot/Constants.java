@@ -10,7 +10,6 @@ import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
 import java.util.List;
-import java.util.Set;
 
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
@@ -32,9 +31,6 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
-
-import java.util.List;                        
-import edu.wpi.first.math.geometry.Translation2d;
 
 public class Constants {
     public static final CANBus CAN_FD_BUS = new CANBus("base1");

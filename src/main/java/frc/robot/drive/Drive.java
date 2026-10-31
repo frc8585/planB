@@ -2,54 +2,49 @@ package frc.robot.drive;
 
 import static frc.robot.Constants.DriveConstants.*;
 
+import java.util.function.DoubleSupplier;
+
 import com.ctre.phoenix.motorcontrol.ControlMode;
+import com.ctre.phoenix.motorcontrol.InvertType;
 import com.ctre.phoenix.motorcontrol.NeutralMode;
 import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.drive.DifferentialDrive;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class Drive extends SubsystemBase {
-    // --- 硬體宣告 (使用 Phoenix 5 的 WPI_TalonSRX) ---
     private final WPI_TalonSRX leftLeader;
     private final WPI_TalonSRX leftFollower;
     private final WPI_TalonSRX rightLeader;
     private final WPI_TalonSRX rightFollower;
 
-    // --- WPILib 差速底盤控制器 ---
     private final DifferentialDrive differentialDrive;
 
     public Drive() {
-        // 1. 初始化馬達
         leftLeader = new WPI_TalonSRX(LEFT_LEADER_ID);
         leftFollower = new WPI_TalonSRX(LEFT_FOLLOWER_ID);
         rightLeader = new WPI_TalonSRX(RIGHT_LEADER_ID);
         rightFollower = new WPI_TalonSRX(RIGHT_FOLLOWER_ID);
 
-        // 2. 設定主從跟隨 (Follower 模式)
+        // 轉向：只設 Leader，Follower 一律跟隨 Leader
+        leftLeader.setInverted(false);
+        rightLeader.setInverted(true);
         leftFollower.follow(leftLeader);
         rightFollower.follow(rightLeader);
+        leftFollower.setInverted(InvertType.FollowMaster);
+        rightFollower.setInverted(InvertType.FollowMaster);
 
-        // 3. 設定馬達轉向 (依實際配線調整 true/false)
-        leftLeader.setInverted(false);
-        leftFollower.setInverted(false);
-        rightLeader.setInverted(true);
-        rightFollower.setInverted(true);
+        for (WPI_TalonSRX m : new WPI_TalonSRX[] { leftLeader, leftFollower, rightLeader, rightFollower }) {
+            m.setNeutralMode(NeutralMode.Brake);
+            // 電流限制：四顆都要設（Follower 是獨立的控制器）
+            m.configContinuousCurrentLimit(CURRENT_LIMIT_AMPS);
+            m.configPeakCurrentLimit(CURRENT_LIMIT_AMPS + 10);
+            m.configPeakCurrentDuration(100); // ms
+            m.enableCurrentLimit(true);
+        }
 
-        // 4. 設定煞車模式
-        leftLeader.setNeutralMode(NeutralMode.Brake);
-        leftFollower.setNeutralMode(NeutralMode.Brake);
-        rightLeader.setNeutralMode(NeutralMode.Brake);
-        rightFollower.setNeutralMode(NeutralMode.Brake);
-
-        // 5. 設定電流限制
-        leftLeader.configPeakCurrentLimit(CURRENT_LIMIT_AMPS);
-        leftLeader.enableCurrentLimit(true);
-        rightLeader.configPeakCurrentLimit(CURRENT_LIMIT_AMPS);
-        rightLeader.enableCurrentLimit(true);
-
-        // 6. 初始化 WPILib DifferentialDrive
         differentialDrive = new DifferentialDrive(
             (output) -> leftLeader.set(ControlMode.PercentOutput, output),
             (output) -> rightLeader.set(ControlMode.PercentOutput, output)
@@ -59,12 +54,13 @@ public class Drive extends SubsystemBase {
 
     /* ==================== 駕駛控制方法 ==================== */
 
+    /** 直接控制（不再額外平方）。自動程式用 */
     public void driveArcade(double xSpeed, double zRotation) {
-        differentialDrive.arcadeDrive(xSpeed, zRotation);
+        differentialDrive.arcadeDrive(xSpeed, zRotation, false);
     }
 
     public void driveTank(double leftSpeed, double rightSpeed) {
-        differentialDrive.tankDrive(leftSpeed, rightSpeed);
+        differentialDrive.tankDrive(leftSpeed, rightSpeed, false);
     }
 
     public void stop() {
@@ -72,20 +68,24 @@ public class Drive extends SubsystemBase {
         rightLeader.stopMotor();
     }
 
-    /* ==================== Commands (指令封裝) ==================== */
+    /* ==================== Commands ==================== */
 
-    public Command arcadeDriveCommand(
-        java.util.function.DoubleSupplier xSpeedSupplier,
-        java.util.function.DoubleSupplier zRotationSupplier
-    ) {
-        // 直接使用 this.run() 呼叫 differentialDrive 的 arcadeDrive 方法
+    /** 搖桿駕駛：前進與轉向都做平方，讓低速更好控制 */
+    public Command arcadeDriveCommand(DoubleSupplier xSpeedSupplier, DoubleSupplier zRotationSupplier) {
         return this.run(() -> {
-            // 取得搖桿數值並加上平方率（讓低速操控更線性）
-            double xSpeed = Math.copySign(Math.pow(xSpeedSupplier.getAsDouble(), 2), xSpeedSupplier.getAsDouble());
-            double zRotation = Math.copySign(Math.pow(zRotationSupplier.getAsDouble(), 2), zRotationSupplier.getAsDouble());
-            
-            // 透過 differentialDrive 進行控制
-            differentialDrive.arcadeDrive(xSpeed, zRotation);
+            double x = xSpeedSupplier.getAsDouble();
+            double z = zRotationSupplier.getAsDouble();
+            // 這裡已手動平方，所以呼叫時 squareInputs 要傳 false，否則會變四次方
+            differentialDrive.arcadeDrive(Math.copySign(x * x, x), Math.copySign(z * z, z), false);
         }).withName("Drive: ArcadeDrive");
+    }
+
+    /** 自動瞄準：前進仍平方，轉向「不」平方（輸出與誤差成正比），並限制最大轉速 */
+    public Command aimDriveCommand(DoubleSupplier xSpeedSupplier, DoubleSupplier zRotationSupplier) {
+        return this.run(() -> {
+            double x = xSpeedSupplier.getAsDouble();
+            double z = MathUtil.clamp(zRotationSupplier.getAsDouble(), -0.5, 0.5);
+            differentialDrive.arcadeDrive(Math.copySign(x * x, x), z, false);
+        }).withName("Drive: Aim");
     }
 }
