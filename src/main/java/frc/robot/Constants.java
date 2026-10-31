@@ -9,6 +9,7 @@ import static edu.wpi.first.units.Units.RotationsPerSecond;
 import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Volts;
 
+import java.util.List;
 import java.util.Set;
 
 import com.ctre.phoenix6.CANBus;
@@ -22,6 +23,7 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
@@ -30,6 +32,9 @@ import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
+
+import java.util.List;                        
+import edu.wpi.first.math.geometry.Translation2d;
 
 public class Constants {
     public static final CANBus CAN_FD_BUS = new CANBus("base1");
@@ -171,32 +176,38 @@ public class Constants {
     }
 
     public static final class VisionConstants {
-        // 3 顆 OV9281 相機名稱（需與 PhotonVision 介面中的名稱相符）
-        public static final String[] CAMERA_NAMES = { "camera_front", "camera_left", "camera_right" };
+    // 3 顆 OV9281 相機名稱（需與 PhotonVision 介面中的名稱相符）
+    public static final String[] CAMERA_NAMES = { "camera_front", "camera_left", "camera_right" };
 
-        // 相機在機器人本體座標系下的安裝位置 (X, Y, Z 與 Roll, Pitch, Yaw)
-        public static final Transform3d[] CAMERA_TRANSFORMS = {
-            new Transform3d(new Translation3d(0.3, 0.0, 0.5), new Rotation3d(0, 0, 0)), // 前相機
-            new Transform3d(new Translation3d(0.0, 0.3, 0.5), new Rotation3d(0, 0, 90)), // 左相機
-            new Transform3d(new Translation3d(0.0, -0.3, 0.5), new Rotation3d(0, 0, -90)) // 右相機
-        };
+    // 相機在機器人座標系下的位置 (X前, Y左, Z上；單位公尺) 與角度 (roll, pitch, yaw；單位「弧度」)
+    // ⚠ 數值是示意，請用捲尺量實際安裝位置
+    public static final Transform3d[] CAMERA_TRANSFORMS = {
+        new Transform3d(new Translation3d(0.3, 0.0, 0.5),  new Rotation3d(0, 0, 0)),                    // 前
+        new Transform3d(new Translation3d(0.0, 0.3, 0.5),  new Rotation3d(0, 0, Math.toRadians(90))),   // 左
+        new Transform3d(new Translation3d(0.0, -0.3, 0.5), new Rotation3d(0, 0, Math.toRadians(-90)))   // 右
+    };
 
-        // 載入官方場地 AprilTag 地圖
-        public static final AprilTagFieldLayout APRIL_TAGS = 
-            AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
+    // 場地 AprilTag 地圖（要跟 PhotonVision 網頁設定的 layout 一致：welded 或 AndyMark）
+    public static final AprilTagFieldLayout APRIL_TAGS =
+        AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
 
-        // 過濾閥值
-        public static final double MAX_AMBIGUITY = 0.2;
-        public static final Distance MAX_Z_HEIGHT = Meters.of(0.75);
+    // 過濾閥值
+    public static final double MAX_AMBIGUITY = 0.2;
+    public static final Distance MAX_Z_HEIGHT = Meters.of(0.75);
 
-        // 標準差基準與偏置
-        public static final double[] LINEAR_STD_DEV_BASELINES = { 0.1, 0.1, 0.1 };
-        public static final double ANGULAR_STD_DEV_BASELINE = 0.1;
-        public static final double HUB_TAG_STD_DEV_BIAS = 0.5;
-        public static final double CLIMB_TAG_STD_DEV_BIAS = 0.5;
+    // 標準差基準
+    public static final double[] LINEAR_STD_DEV_BASELINES = { 0.1, 0.1, 0.1 };
+    public static final double ANGULAR_STD_DEV_BASELINE = 0.1;
 
-        // 目標 Tag ID 集合 (可根據實際賽季手遊或手冊增減)
-        public static final Set<Integer> BLUE_HUB_TAG_IDS = Set.of(1, 2, 3);
-        public static final Set<Integer> RED_HUB_TAG_IDS = Set.of(4, 5, 6);
-    }
+    // 瞄準用 tag：只用面向己方聯盟區的那一面，依優先順序排列（10、26 與 HUB 中心對齊，優先使用）
+    public static final List<Integer> RED_AIM_TAG_IDS  = List.of(10, 9);
+    public static final List<Integer> BLUE_AIM_TAG_IDS = List.of(26, 25);
+
+    // HUB 中心座標（公尺），之後做「用位置算角度」的瞄準可以直接用
+    public static final Translation2d BLUE_HUB_CENTER = new Translation2d(4.61, 4.02);
+    public static final Translation2d RED_HUB_CENTER  = new Translation2d(11.90, 4.02);
+
+    // 相機資料超過這個秒數沒更新，就當作看不到目標
+    public static final double MAX_RESULT_AGE_SECONDS = 0.3;
+}
 }

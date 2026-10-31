@@ -37,8 +37,6 @@ public class RobotContainer {
     private final SendableChooser<Command> autoChooser;
 
     public RobotContainer() {
-        // 1. 初始化 PathPlanner AutoBuilder (針對差速底盤)
-        configureAutoBuilder();
 
         // 2. 建立按鈕與控制綁定
         configureBindings();
@@ -48,29 +46,6 @@ public class RobotContainer {
         SmartDashboard.putData("Auto Chooser", autoChooser);
     }
 
-    private void configureAutoBuilder() {
-        try {
-            // 從 PathPlanner GUI 設定檔載入機器人物理參數
-            RobotConfig config = RobotConfig.fromGUISettings();
-
-            // 暫時使用最基礎的設定，確保編譯 100% 通過
-            AutoBuilder.configure(
-                m_drive::getPose,           // 1. 取得座標
-                m_drive::resetPose,         // 2. 重置座標
-                m_drive::getRobotRelativeSpeeds, // 3. 取得速度
-                (speeds, feedforwards) -> m_drive.driveRobotRelative(speeds), // 4. 驅動
-                new com.pathplanner.lib.controllers.PPLTVController(0.2), // 5. 差速底盤專用 LTV 控制器
-                config,                     // 6. 機器人組態
-                () -> {
-                    var alliance = DriverStation.getAlliance();
-                    return alliance.isPresent() && alliance.get() == DriverStation.Alliance.Red;
-                },
-                m_drive                     // 8. 宣告子系統
-            );
-        } catch (Exception e) {
-            DriverStation.reportError("Failed to load PathPlanner RobotConfig and AutoBuilder: " + e.getMessage(), e.getStackTrace());
-        }
-    }
 
     private void configureBindings() {
         // ==================== A. 底盤預設搖桿操控 ====================
@@ -105,7 +80,7 @@ public class RobotContainer {
                 m_index.runIndexCommand(),
                 m_drive.arcadeDriveCommand(
                     () -> -driverController.getLeftY(),
-                    () -> m_vision.getTargetYaw(0) * 0.03
+                    () -> m_vision.getHubTargetYaw(0).orElse(0.0) * 0.03
                 )
             )
         );
@@ -120,6 +95,9 @@ public class RobotContainer {
                 m_index.runIndexCommand()
             )
         );
+
+        // ==================== F. Y 鍵：Intake 單獨收回 ====================
+        operatorController.y().onTrue(m_intake.stow());
     }
 
     /**

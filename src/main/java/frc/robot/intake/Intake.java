@@ -41,6 +41,8 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
 
+import edu.wpi.first.wpilibj.Timer;
+
 public class Intake extends SubsystemBase{
     private final SimpleDifferentialMechanism<TalonFX> diffMechRack;
     private final SimpleDifferentialMechanism<TalonFX> diffMechSpin;
@@ -100,17 +102,34 @@ public class Intake extends SubsystemBase{
         diffMechRack.setPosition(0, 0);
     }
 
+    /** LT：rack 往展開位置走並吸球；rack 卡住就停止 rack，滾輪繼續轉，放開 LT 才結束 */
     public Command deploy() {
-        return this.runEnd(
+        final Timer timer = new Timer();
+        final boolean[] rackStopped = { false };
+    
+        return this.startRun(
+            // 按下 LT 的瞬間初始化
             () -> {
-                setRackPosition(DEPLOY_POS);
-                setSpinOutput(SPIN_VOLTAGE);
+                timer.restart();
+                rackStopped[0] = false;
             },
-            this::stopIntake
+            // 按住期間每 20ms 執行一次
+            () -> {
+                setSpinOutput(SPIN_VOLTAGE);                  // 滾輪一直吸球
+            
+                if (!rackStopped[0]) {
+                    // 起動後 0.3 秒內不檢查卡住，避免起動電流被誤判
+                    if (timer.hasElapsed(0.3) && rackStalled()) {
+                        rackStopped[0] = true;
+                        stopRack();                            // rack 卡住：停止
+                    } else {
+                        setRackPosition(DEPLOY_POS);           // 繼續往展開位置走
+                    }
+                }
+            }
         )
-        .until(this::spinStalled).andThen(unjamSpin())
-        .until(this::rackStalled).andThen(unjamRackDeploying())
-        .withName("Deploy Right Intake");
+        .finallyDo(this::stopSpin)   // 放開 LT：停滾輪（rack 維持現況，之後用 Y 收回）
+        .withName("Intake: Deploy");
     }
 
     /**
@@ -150,6 +169,20 @@ public class Intake extends SubsystemBase{
             Commands.waitUntil(() -> !rackStalled()),
             this.runOnce(() -> setRackPosition(DEPLOY_POS))
         ).withName("Intake:Unjam Rack Deploying Right");
+    }
+
+    /** Intake 單獨收回：滾輪停止，rack 回到收納位置 */
+    public Command stow() {
+        return this.runEnd(
+            () -> {
+                stopSpin();
+                setRackPosition(STOW_POS);
+            },
+            this::stopSpin   // 結束時只停滾輪，rack 不放 Coast，維持在收納位置
+        )
+        .until(this::isStowed)
+        .withTimeout(3.0)    // 安全保險：2 秒內沒到位也結束
+        .withName("Intake: Stow");
     }
 
     public boolean rackStalled() {
