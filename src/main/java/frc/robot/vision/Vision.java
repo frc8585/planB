@@ -55,7 +55,6 @@ public class Vision extends SubsystemBase {
 
         boolean isBlue = DriverStation.getAlliance().orElse(Alliance.Blue) == Alliance.Blue;
         Set<Integer> hubTags = isBlue ? BLUE_HUB_TAG_IDS : RED_HUB_TAG_IDS;
-        Set<Integer> climbTags = isBlue ? BLUE_CLIMB_TAG_IDS : RED_CLIMB_TAG_IDS;
 
         for (int i = 0; i < cameras.length; i++) {
             PhotonCamera camera = cameras[i];
@@ -95,12 +94,12 @@ public class Vision extends SubsystemBase {
                 double stdDevFactor = Math.pow(averageDistance, 2.0) / tagCount;
 
                 for (PhotonTrackedTarget target : estimatedPose.targetsUsed) {
-                    int tagId = target.getFiducialId();
-                    if (climbing && !climbTags.contains(tagId)) {
-                        stdDevFactor += CLIMB_TAG_STD_DEV_BIAS;
-                    } else if (!climbing && !hubTags.contains(tagId)) {
-                        stdDevFactor += HUB_TAG_STD_DEV_BIAS;
-                    }
+                int tagId = target.getFiducialId();
+    
+                // 如果不是 HUB 標籤，就增加標準差偏置 (降低其在定位中的權重)
+                if (!hubTags.contains(tagId)) {
+                    stdDevFactor += HUB_TAG_STD_DEV_BIAS;
+                }
                 }
 
                 double linearStdDev = LINEAR_STD_DEV_BASELINES[i] * stdDevFactor;

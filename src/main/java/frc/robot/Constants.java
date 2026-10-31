@@ -36,26 +36,25 @@ public class Constants {
     public static final CANBus CAN_RIO_BUS = new CANBus("rio");
 
     public static final class DriveConstants {
-        // --- 底盤馬達 CAN ID (Talon SRX 通常掛在 RIO CAN 總線) ---
+        // --- 底盤馬達 CAN ID ---
         public static final int LEFT_LEADER_ID = 1;
         public static final int LEFT_FOLLOWER_ID = 2;
         public static final int RIGHT_LEADER_ID = 3;
         public static final int RIGHT_FOLLOWER_ID = 4;
 
-        // --- 連續電流與電流限制 (CIM 馬達保護) ---
-        public static final int CURRENT_LIMIT_AMPS = 40;
+        // --- 連續電流與電流限制 ---
+        public static final int CURRENT_LIMIT_AMPS = 30;
     }
 
     public static final class IndexConstants {
-    // --- 馬達 CAN ID (請依實際配線修改) ---
-    public static final int INDEX_MOTOR_ID = 15; // 範例 ID，可自行更改
+    public static final int INDEX_MOTOR_ID = 15;
 
     // --- 馬達輸出與轉向設定 (順時針正轉) ---
     public static final MotorOutputConfigs INDEX_OUTPUT_CONFIGS = new MotorOutputConfigs()
         .withNeutralMode(NeutralModeValue.Brake)
         .withInverted(InvertedValue.Clockwise_Positive); // 設定順時針為正向
 
-    // --- 電流限制 (保護 Kraken X44) ---
+    // --- 電流限制 (Kraken X44) ---
     public static final CurrentLimitsConfigs INDEX_CURRENT_LIMITS = new CurrentLimitsConfigs()
         .withStatorCurrentLimit(40.0)
         .withStatorCurrentLimitEnable(true);
@@ -98,31 +97,31 @@ public class Constants {
                 .withMotionMagicCruiseVelocity(RotationsPerSecond.of(50))
                 .withMotionMagicAcceleration(RotationsPerSecondPerSecond.of(60));
 
-        public static final Angle STOW_POS = Degrees.of(0);
-        public static final Angle DEPLOY_POS = Degrees.of(0);
-        public static final Voltage SPIN_VOLTAGE = Volts.of(0);
-        public static final Voltage REVERSE_SPIN_VOLTAGE = Volts.of(0);
-        public static final Voltage UNJAM_SPIN_VOLTAGE = Volts.of(0);
-        public static final Angle STOW_TOLERANCE = Degrees.of(0);
-        public static final Angle DEPLOY_TOLERANCE = Degrees.of(0);
-        public static final Angle DECOUPLE_DISTANCE = Degrees.of(0);
+        public static final Angle STOW_POS = Degrees.of(0);//收納位置
+        public static final Angle DEPLOY_POS = Degrees.of(0);//完全展開位置
+        public static final Voltage SPIN_VOLTAGE = Volts.of(8);//進料電壓
+        public static final Voltage REVERSE_SPIN_VOLTAGE = Volts.of(6);//反轉電壓
+        public static final Voltage UNJAM_SPIN_VOLTAGE = Volts.of(6);//防卡球電壓
+        public static final Angle STOW_TOLERANCE = Degrees.of(3);//收納誤差
+        public static final Angle DEPLOY_TOLERANCE = Degrees.of(3);//展開誤差
+        public static final Angle DECOUPLE_DISTANCE = Degrees.of(0);//脫鉤角度(無)
 
-        public static final AngularVelocity MIN_SWITCH_ROBOT_VELOCITY = RadiansPerSecond.of(0);
+        public static final AngularVelocity MIN_SWITCH_ROBOT_VELOCITY = RadiansPerSecond.of(0);//切換狀態時車速限制
 
-        public static final Current RACK_STALL_CURRENT = Amps.of(40);
-        public static final AngularVelocity RACK_STALL_VEL = RadiansPerSecond.of(0);
-        public static final Voltage ZEROING_VOLTAGE = Volts.of(0);
+        public static final Current RACK_STALL_CURRENT = Amps.of(20);//支架堵轉判定電流
+        public static final AngularVelocity RACK_STALL_VEL = RadiansPerSecond.of(0.3);//支架堵轉判定速度
+        public static final Voltage ZEROING_VOLTAGE = Volts.of(-2);//歸零校正電壓
 
-        public static final Current SPIN_STALL_CURRENT = Amps.of(20);
-        public static final AngularVelocity SPIN_STALL_ANGULAR_VELOCITY = RadiansPerSecond.of(0);
+        public static final Current SPIN_STALL_CURRENT = Amps.of(20);//滾輪卡彈判定電流
+        public static final AngularVelocity SPIN_STALL_ANGULAR_VELOCITY = RadiansPerSecond.of(0.3);//滾輪卡彈判定轉速
     }    
     
     public static final class ShooterConstants {
-        public static final int FLYWHEEL_LEFT_ID = 10;
-        public static final int FLYWHEEL_RIGHT_ID = 11;
-        public static final int FEEDER_ID = 12;
-        public static final int PIVOT_LEFT_ID = 13;
-        public static final int PIVOT_RIGHT_ID = 14;
+        public static final int FLYWHEEL_LEFT_ID = 20;
+        public static final int FLYWHEEL_RIGHT_ID = 21;
+        public static final int FEEDER_ID = 22;
+        public static final int PIVOT_LEFT_ID = 23;
+        public static final int PIVOT_RIGHT_ID = 24;
     
         public static final Slot0Configs FLYWHEEL_GAINS = new Slot0Configs()
             .withKP(0.1).withKI(0.0).withKD(0.0).withKV(0.12);
@@ -199,7 +198,5 @@ public class Constants {
         // 目標 Tag ID 集合 (可根據實際賽季手遊或手冊增減)
         public static final Set<Integer> BLUE_HUB_TAG_IDS = Set.of(1, 2, 3);
         public static final Set<Integer> RED_HUB_TAG_IDS = Set.of(4, 5, 6);
-        public static final Set<Integer> BLUE_CLIMB_TAG_IDS = Set.of(14, 15);
-        public static final Set<Integer> RED_CLIMB_TAG_IDS = Set.of(20, 21);
     }
 }
